@@ -6,7 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0A600BC02E471E51002964F9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A600BBF2E471E51002964F9 /* WidgetKit.framework */; };
+		0A600BC22E471E51002964F9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A600BC12E471E51002964F9 /* SwiftUI.framework */; };
+		0A600BD32E471E54002964F9 /* moningWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A600BBD2E471E50002964F9 /* moningWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0AB8AF992E46721C00E216DF /* implementation_overview.md in Resources */ = {isa = PBXBuildFile; fileRef = 0AB8AF982E4671D500E216DF /* implementation_overview.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		0A600BD12E471E54002964F9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0AB8AF5A2E46712300E216DF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A600BBC2E471E50002964F9;
+			remoteInfo = moningWidgetExtension;
+		};
 		0AB8AF702E46712400E216DF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0AB8AF5A2E46712300E216DF /* Project object */;
@@ -23,13 +37,49 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0A600BD42E471E54002964F9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0A600BD32E471E54002964F9 /* moningWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0A600BBD2E471E50002964F9 /* moningWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = moningWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A600BBF2E471E51002964F9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0A600BC12E471E51002964F9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0AB8AF622E46712300E216DF /* moning.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = moning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0AB8AF6F2E46712400E216DF /* moningTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moningTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0AB8AF792E46712400E216DF /* moningUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moningUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0AB8AF982E4671D500E216DF /* implementation_overview.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_overview.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0A600BD72E471E54002964F9 /* Exceptions for "moningWidget" folder in "moningWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0A600BBC2E471E50002964F9 /* moningWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0A600BC32E471E51002964F9 /* moningWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0A600BD72E471E54002964F9 /* Exceptions for "moningWidget" folder in "moningWidgetExtension" target */,
+			);
+			path = moningWidget;
+			sourceTree = "<group>";
+		};
 		0AB8AF642E46712300E216DF /* moning */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = moning;
@@ -48,6 +98,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0A600BBA2E471E50002964F9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A600BC22E471E51002964F9 /* SwiftUI.framework in Frameworks */,
+				0A600BC02E471E51002964F9 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0AB8AF5F2E46712300E216DF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -72,12 +131,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A600BBE2E471E51002964F9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0A600BBF2E471E51002964F9 /* WidgetKit.framework */,
+				0A600BC12E471E51002964F9 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		0AB8AF592E46712300E216DF = {
 			isa = PBXGroup;
 			children = (
+				0AB8AF982E4671D500E216DF /* implementation_overview.md */,
 				0AB8AF642E46712300E216DF /* moning */,
 				0AB8AF722E46712400E216DF /* moningTests */,
 				0AB8AF7C2E46712400E216DF /* moningUITests */,
+				0A600BC32E471E51002964F9 /* moningWidget */,
+				0A600BBE2E471E51002964F9 /* Frameworks */,
 				0AB8AF632E46712300E216DF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +159,7 @@
 				0AB8AF622E46712300E216DF /* moning.app */,
 				0AB8AF6F2E46712400E216DF /* moningTests.xctest */,
 				0AB8AF792E46712400E216DF /* moningUITests.xctest */,
+				0A600BBD2E471E50002964F9 /* moningWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,6 +167,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0A600BBC2E471E50002964F9 /* moningWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A600BD82E471E54002964F9 /* Build configuration list for PBXNativeTarget "moningWidgetExtension" */;
+			buildPhases = (
+				0A600BB92E471E50002964F9 /* Sources */,
+				0A600BBA2E471E50002964F9 /* Frameworks */,
+				0A600BBB2E471E50002964F9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0A600BC32E471E51002964F9 /* moningWidget */,
+			);
+			name = moningWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = moningWidgetExtension;
+			productReference = 0A600BBD2E471E50002964F9 /* moningWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		0AB8AF612E46712300E216DF /* moning */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0AB8AF832E46712400E216DF /* Build configuration list for PBXNativeTarget "moning" */;
@@ -102,10 +196,12 @@
 				0AB8AF5E2E46712300E216DF /* Sources */,
 				0AB8AF5F2E46712300E216DF /* Frameworks */,
 				0AB8AF602E46712300E216DF /* Resources */,
+				0A600BD42E471E54002964F9 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0A600BD22E471E54002964F9 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0AB8AF642E46712300E216DF /* moning */,
@@ -173,6 +269,9 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					0A600BBC2E471E50002964F9 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					0AB8AF612E46712300E216DF = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -203,15 +302,24 @@
 				0AB8AF612E46712300E216DF /* moning */,
 				0AB8AF6E2E46712400E216DF /* moningTests */,
 				0AB8AF782E46712400E216DF /* moningUITests */,
+				0A600BBC2E471E50002964F9 /* moningWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0A600BBB2E471E50002964F9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0AB8AF602E46712300E216DF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AB8AF992E46721C00E216DF /* implementation_overview.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,6 +340,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0A600BB92E471E50002964F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0AB8AF5E2E46712300E216DF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +371,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0A600BD22E471E54002964F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A600BBC2E471E50002964F9 /* moningWidgetExtension */;
+			targetProxy = 0A600BD12E471E54002964F9 /* PBXContainerItemProxy */;
+		};
 		0AB8AF712E46712400E216DF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 0AB8AF612E46712300E216DF /* moning */;
@@ -269,6 +389,58 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0A600BD52E471E54002964F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = moningWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = moningWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jonathan.moning.moningWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0A600BD62E471E54002964F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = moningWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = moningWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jonathan.moning.moningWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		0AB8AF812E46712400E216DF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -513,6 +685,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0A600BD82E471E54002964F9 /* Build configuration list for PBXNativeTarget "moningWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A600BD52E471E54002964F9 /* Debug */,
+				0A600BD62E471E54002964F9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		0AB8AF5D2E46712300E216DF /* Build configuration list for PBXProject "moning" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
