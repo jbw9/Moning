@@ -4,11 +4,15 @@ import Combine
 
 class SimpleDataService: ObservableObject {
     private let persistenceController: SimplePersistenceController
+    private let newsService = NewsService.shared
     private var cancellables = Set<AnyCancellable>()
     
     @Published var articles: [Article] = []
     @Published var sources: [NewsSource] = []
     @Published var userPreferences: UserPreferences?
+    @Published var isLoadingNews = false
+    @Published var lastNewsUpdate: Date?
+    @Published var newsErrorMessage: String?
     
     // Fallback to MockData if Core Data fails
     private var useMockData = false
@@ -16,6 +20,7 @@ class SimpleDataService: ObservableObject {
     init(persistenceController: SimplePersistenceController = .shared) {
         self.persistenceController = persistenceController
         loadInitialData()
+        setupNewsServiceBinding()
     }
     
     // MARK: - Articles
@@ -204,6 +209,105 @@ class SimpleDataService: ObservableObject {
         loadArticles()
         loadSources()
         loadUserPreferences()
+        
+        // If we're using mock data or have no articles, fetch from news API
+        if useMockData || articles.isEmpty {
+            Task {
+                await fetchLatestNews()
+            }
+        }
+    }
+    
+    // MARK: - News Service Integration
+    
+    private func setupNewsServiceBinding() {
+        // Bind NewsService published properties to our published properties
+        newsService.$isLoading
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.isLoadingNews, on: self)
+            .store(in: &cancellables)
+        
+        newsService.$lastUpdateTime
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.lastNewsUpdate, on: self)
+            .store(in: &cancellables)
+        
+        newsService.$errorMessage
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.newsErrorMessage, on: self)
+            .store(in: &cancellables)
+        
+        newsService.$articles
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newArticles in
+                self?.handleFetchedArticles(newArticles)
+            }
+            .store(in: &cancellables)
+    }
+    
+    @MainActor
+    func fetchLatestNews() async {
+        guard let preferences = userPreferences else {
+            // Use default categories if preferences not loaded
+            await newsService.fetchLatestArticles(categories: [.artificialIntelligence, .technology, .startups])
+            return
+        }
+        
+        let categories = preferences.preferredCategories.isEmpty ? 
+            CategoryType.allCases : preferences.preferredCategories
+        
+        await newsService.fetchLatestArticles(categories: categories)
+    }
+    
+    @MainActor
+    func refreshNews() async {
+        await fetchLatestNews()
+    }
+    
+    @MainActor
+    func fetchArticlesForCategory(_ category: CategoryType) async {
+        do {
+            let categoryArticles = try await newsService.fetchArticlesForCategory(category)
+            handleFetchedArticles(categoryArticles)
+        } catch {
+            newsErrorMessage = error.localizedDescription
+        }
+    }
+    
+    private func handleFetchedArticles(_ fetchedArticles: [Article]) {
+        // Merge fetched articles with existing ones, avoiding duplicates
+        var updatedArticles = articles
+        
+        for article in fetchedArticles {
+            // Check if article already exists (by URL or title similarity)
+            let exists = updatedArticles.contains { existingArticle in
+                existingArticle.sourceURL == article.sourceURL ||
+                (existingArticle.title.lowercased() == article.title.lowercased() && 
+                 existingArticle.source.name == article.source.name)
+            }
+            
+            if !exists {
+                updatedArticles.append(article)
+                // Save new article to Core Data
+                saveArticle(article)
+            }
+        }
+        
+        // Sort by publication date
+        self.articles = updatedArticles.sorted { $0.publishedAt > $1.publishedAt }
+        
+        // Update mock data flag since we now have real data
+        if !fetchedArticles.isEmpty {
+            useMockData = false
+        }
+    }
+    
+    func shouldRefreshNews() -> Bool {
+        guard let lastUpdate = lastNewsUpdate else { return true }
+        
+        // Refresh if it's been more than 30 minutes
+        let thirtyMinutesAgo = Date().addingTimeInterval(-30 * 60)
+        return lastUpdate < thirtyMinutesAgo
     }
     
     // MARK: - Conversion Helpers

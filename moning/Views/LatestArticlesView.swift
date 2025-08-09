@@ -16,13 +16,49 @@ struct LatestArticlesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text("Latest Articles")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Latest Articles")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        if let lastUpdate = dataService.lastNewsUpdate {
+                            Text("Updated \(RelativeDateTimeFormatter().localizedString(for: lastUpdate, relativeTo: Date()))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
                     Spacer()
+                    
+                    if dataService.isLoadingNews {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 16)
+                
+                if let errorMessage = dataService.newsErrorMessage {
+                    VStack(spacing: 8) {
+                        Text("Unable to load latest news")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("Try Again") {
+                            Task {
+                                await dataService.refreshNews()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                }
                 
                 LazyVStack(spacing: 12) {
                     ForEach(articles) { article in
@@ -30,8 +66,38 @@ struct LatestArticlesView: View {
                             .padding(.horizontal)
                     }
                 }
+                
+                if articles.isEmpty && !dataService.isLoadingNews {
+                    VStack(spacing: 16) {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No articles available")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Button("Load News") {
+                            Task {
+                                await dataService.fetchLatestNews()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, minHeight: 200)
+                }
             }
             .padding(.top)
+        }
+        .refreshable {
+            await dataService.refreshNews()
+        }
+        .task {
+            // Auto-refresh if needed when view appears
+            if dataService.shouldRefreshNews() {
+                await dataService.refreshNews()
+            }
         }
     }
 }
