@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ArticleEntity" representedClassName="ArticleEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="audioURL" optional="YES" attributeType="String"/>
+        <attribute name="audioDuration" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="audioPlaybackPosition" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="category" optional="NO" attributeType="String"/>
+        <attribute name="content" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <attribute name="isBookmarked" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="priority" optional="NO" attributeType="String" defaultValueString="normal"/>
+        <attribute name="publishedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="readAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="readingTimeMinutes" optional="NO" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="sentiment" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="sourceURL" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="NO" attributeType="String" defaultValueString="unread"/>
+        <attribute name="summary" optional="NO" attributeType="String"/>
+        <attribute name="tags" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="userRating" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <relationship name="source" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="NewsSourceEntity" inverseName="articles" inverseEntity="NewsSourceEntity"/>
+        <relationship name="readingSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReadingSessionEntity" inverseName="article" inverseEntity="ReadingSessionEntity"/>
+    </entity>
+    <entity name="NewsSourceEntity" representedClassName="NewsSourceEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="categories" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="domain" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="logoURL" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="reliability" optional="NO" attributeType="Double" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <attribute name="rssURL" optional="YES" attributeType="String"/>
+        <relationship name="articles" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ArticleEntity" inverseName="source" inverseEntity="ArticleEntity"/>
+    </entity>
+    <entity name="ReadingSessionEntity" representedClassName="ReadingSessionEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="completionPercentage" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="durationSeconds" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="readingMode" optional="NO" attributeType="String" defaultValueString="text"/>
+        <attribute name="startTime" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="article" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ArticleEntity" inverseName="readingSessions" inverseEntity="ArticleEntity"/>
+    </entity>
+    <entity name="UserPreferencesEntity" representedClassName="UserPreferencesEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="audioPlaybackSpeed" optional="NO" attributeType="Double" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <attribute name="autoPlayAudio" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="dailyDigestTime" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dataSaverMode" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="notificationsEnabled" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="offlineModeEnabled" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="preferredAudioVoice" optional="NO" attributeType="String" defaultValueString="system"/>
+        <attribute name="preferredCategories" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="readingSpeed" optional="NO" attributeType="Integer 16" defaultValueString="250" usesScalarValueType="YES"/>
+    </entity>
+</model>

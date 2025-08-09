@@ -1,11 +1,15 @@
 import SwiftUI
 
 struct LatestArticlesView: View {
-    let articles = MockData.articles
+    @EnvironmentObject private var dataService: SimpleDataService
     let onBackTap: (() -> Void)?
     
     init(onBackTap: (() -> Void)? = nil) {
         self.onBackTap = onBackTap
+    }
+    
+    private var articles: [Article] {
+        dataService.articles
     }
     
     var body: some View {
@@ -34,7 +38,7 @@ struct LatestArticlesView: View {
 
 struct ArticleCard: View {
     let article: Article
-    @State private var showingAudioPlayer = false
+    @StateObject private var audioManager = AudioManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -60,28 +64,49 @@ struct ArticleCard: View {
                 Text(article.timeAgo)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                if article.hasAudio {
+                    Image(systemName: "speaker.wave.2")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
             }
             
             HStack {
+                if article.hasAudio {
+                    Text(article.estimatedListeningTime)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
                 Spacer()
                 
-                Button(action: {
-                    showingAudioPlayer = true
-                }) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Color.black)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                if article.hasAudio {
+                    Button(action: {
+                        if audioManager.currentArticle?.id == article.id {
+                            // Same article - toggle play/pause
+                            if audioManager.isPlaying {
+                                audioManager.pause()
+                            } else {
+                                audioManager.play()
+                            }
+                        } else {
+                            // New article - start playing
+                            audioManager.playArticle(article)
+                        }
+                    }) {
+                        Image(systemName: audioManager.currentArticle?.id == article.id && audioManager.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(audioManager.currentArticle?.id == article.id ? Color.blue : Color.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
                 }
             }
         }
         .padding(16)
         .background(Color(.systemGray6))
         .cornerRadius(12)
-        .sheet(isPresented: $showingAudioPlayer) {
-            AudioPlayerView(article: article)
-        }
     }
 }

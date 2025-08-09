@@ -1,8 +1,25 @@
 import SwiftUI
 
 struct IndustryOverviewView: View {
-    let categoryOverviews = MockData.categoryOverviews
+    @EnvironmentObject private var dataService: SimpleDataService
     let onCategoryTap: () -> Void
+    
+    private var categoryOverviews: [CategoryOverview] {
+        CategoryType.allCases.map { category in
+            let categoryArticles = dataService.getArticlesByCategory(category)
+            let unreadArticles = categoryArticles.filter { $0.status == .unread }
+            let topHeadlines = Array(categoryArticles.prefix(3).map { $0.title })
+            
+            return CategoryOverview(
+                category: category,
+                articleCount: categoryArticles.count,
+                unreadCount: unreadArticles.count,
+                topHeadlines: topHeadlines,
+                articles: Array(categoryArticles.prefix(3))
+            )
+        }
+        .filter { $0.articleCount > 0 } // Only show categories with articles
+    }
     
     var body: some View {
         ScrollView {
@@ -102,13 +119,6 @@ struct CategoryTag: View {
     }
     
     private var tagColor: Color {
-        switch category {
-        case .artificialIntelligence:
-            return .blue
-        case .startups:
-            return .green
-        case .technology:
-            return .purple
-        }
+        category.color
     }
 }

@@ -55,6 +55,7 @@
 		0A600BBD2E471E50002964F9 /* moningWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = moningWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A600BBF2E471E51002964F9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		0A600BC12E471E51002964F9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0A8FFF082E4733EF005D79D6 /* moningWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = moningWidgetExtension.entitlements; sourceTree = "<group>"; };
 		0AB8AF622E46712300E216DF /* moning.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = moning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0AB8AF6F2E46712400E216DF /* moningTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moningTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0AB8AF792E46712400E216DF /* moningUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = moningUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -143,6 +144,7 @@
 		0AB8AF592E46712300E216DF = {
 			isa = PBXGroup;
 			children = (
+				0A8FFF082E4733EF005D79D6 /* moningWidgetExtension.entitlements */,
 				0AB8AF982E4671D500E216DF /* implementation_overview.md */,
 				0AB8AF642E46712300E216DF /* moning */,
 				0AB8AF722E46712400E216DF /* moningTests */,
@@ -394,8 +396,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = moningWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35A46V8G99;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = moningWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = moningWidget;
@@ -420,8 +424,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = moningWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35A46V8G99;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = moningWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = moningWidget;
@@ -565,8 +571,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = moning/moning.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35A46V8G99;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -592,8 +600,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = moning/moning.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35A46V8G99;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var audioManager = AudioManager.shared
+    
     var body: some View {
         TabView {
             TodayView()
@@ -27,6 +29,11 @@ struct ContentView: View {
                     Image(systemName: "gearshape")
                     Text("Settings")
                 }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if audioManager.currentArticle != nil {
+                MiniAudioPlayer()
+            }
         }
     }
 }
