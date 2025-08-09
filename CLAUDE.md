@@ -69,12 +69,14 @@ open moning.xcodeproj
 - [ ] Set up scheduled data collection jobs
 
 #### 2.3 AI Summarization
-- [ ] Deploy OpenAI GPT model on AWS EC2
-- [ ] Create summarization pipeline
+- [ ] Deploy OpenAI gpt-oss-20b model on AWS Lambda + EFS
+- [ ] Set up EFS storage for model files and Lambda function
+- [ ] Create summarization pipeline with batch and real-time processing
 - [ ] Implement multi-level summary generation (short, medium, detailed)
 - [ ] Add sentiment analysis for articles
 - [ ] Create trending topics identification
 - [ ] Implement personalization based on user preferences
+- [ ] Configure CloudWatch events for Lambda container warming
 
 ### Phase 3: Main iOS App Development (Weeks 5-6)
 
@@ -282,8 +284,8 @@ open moning.xcodeproj
 
 ### Technical Risks
 - **Model Performance**: Implement fallback mechanisms and A/B testing
-- **Scaling Issues**: Use auto-scaling and proper caching strategies
-- **API Rate Limits**: Implement graceful degradation and multiple data sources
+- **Lambda Cold Starts**: Use CloudWatch warming and optimize model loading
+- **Cost Management**: Monitor Lambda execution time and optimize batch processing
 
 ### User Adoption
 - **Onboarding**: Clear value proposition and smooth user experience
