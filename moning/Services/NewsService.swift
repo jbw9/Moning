@@ -13,6 +13,7 @@ class NewsService: ObservableObject {
     static let shared = NewsService()
     
     private let apiService = APIService.shared
+    private let rssService = RSSService.shared
     private let dateFormatter: DateFormatter
     
     // Published properties for UI updates
@@ -35,19 +36,25 @@ class NewsService: ObservableObject {
         errorMessage = nil
         
         do {
+            // Fetch from both NewsAPI and RSS feeds concurrently
+            async let newsAPIArticles = fetchNewsAPIArticles(categories: categories)
+            async let rssArticles = rssService.fetchAllRSSArticles()
+            
+            let apiResults = try await newsAPIArticles
+            let rssResults = await rssArticles
+            
+            // Combine all articles
             var allArticles: [Article] = []
+            allArticles.append(contentsOf: apiResults)
+            allArticles.append(contentsOf: rssResults)
             
-            // Fetch articles for each category
-            for category in categories {
-                let categoryArticles = try await fetchArticlesForCategory(category)
-                allArticles.append(contentsOf: categoryArticles)
-            }
-            
-            // Remove duplicates and sort by publication date
-            articles = removeDuplicates(from: allArticles)
+            // Enhanced deduplication for multi-source content
+            articles = enhancedDeduplication(from: allArticles)
                 .sorted { $0.publishedAt > $1.publishedAt }
             
             lastUpdateTime = Date()
+            
+            print("✅ Fetched \(apiResults.count) NewsAPI + \(rssResults.count) RSS = \(allArticles.count) total, \(articles.count) after deduplication")
             
         } catch {
             errorMessage = error.localizedDescription
@@ -55,6 +62,19 @@ class NewsService: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    /// Fetch articles from NewsAPI only (helper method)
+    private func fetchNewsAPIArticles(categories: [CategoryType]) async throws -> [Article] {
+        var allArticles: [Article] = []
+        
+        // Fetch articles for each category
+        for category in categories {
+            let categoryArticles = try await fetchArticlesForCategory(category)
+            allArticles.append(contentsOf: categoryArticles)
+        }
+        
+        return allArticles
     }
     
     /// Fetch articles for a specific category
@@ -146,24 +166,122 @@ class NewsService: ObservableObject {
         )
     }
     
-    /// Remove duplicate articles based on title similarity
-    private func removeDuplicates(from articles: [Article]) -> [Article] {
-        var seen = Set<String>()
+    /// Enhanced deduplication for multi-source content
+    private func enhancedDeduplication(from articles: [Article]) -> [Article] {
         var uniqueArticles: [Article] = []
+        var seenTitles = Set<String>()
+        var seenUrls = Set<String>()
+        var titleGroups: [String: [Article]] = [:]
         
+        // First pass: Group by normalized title
         for article in articles {
-            // Create a normalized key for deduplication
-            let key = article.title.lowercased()
-                .replacingOccurrences(of: "[^a-z0-9\\s]", with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedTitle = normalizeTitle(article.title)
             
-            if !seen.contains(key) && key.count > 10 {
-                seen.insert(key)
-                uniqueArticles.append(article)
+            if normalizedTitle.count > 10 {
+                if titleGroups[normalizedTitle] == nil {
+                    titleGroups[normalizedTitle] = []
+                }
+                titleGroups[normalizedTitle]?.append(article)
             }
         }
         
-        return uniqueArticles
+        // Second pass: Select best article from each group
+        for (normalizedTitle, articleGroup) in titleGroups {
+            guard !seenTitles.contains(normalizedTitle) else { continue }
+            
+            // Find the best article in this group
+            let bestArticle = selectBestArticle(from: articleGroup)
+            
+            // Check for URL duplicates
+            let canonicalURL = canonicalizeURL(bestArticle.sourceURL ?? "")
+            if !seenUrls.contains(canonicalURL) {
+                uniqueArticles.append(bestArticle)
+                seenTitles.insert(normalizedTitle)
+                seenUrls.insert(canonicalURL)
+            }
+        }
+        
+        // Third pass: Fuzzy deduplication for remaining potential duplicates
+        return fuzzyDeduplication(from: uniqueArticles)
+    }
+    
+    /// Remove duplicate articles based on title similarity (fallback method)
+    private func removeDuplicates(from articles: [Article]) -> [Article] {
+        return enhancedDeduplication(from: articles)
+    }
+    
+    private func normalizeTitle(_ title: String) -> String {
+        return title.lowercased()
+            .replacingOccurrences(of: "[^a-z0-9\\s]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private func canonicalizeURL(_ url: String) -> String {
+        guard let urlObj = URL(string: url) else { return url }
+        
+        // Remove tracking parameters and fragments
+        var components = URLComponents(url: urlObj, resolvingAgainstBaseURL: false)
+        components?.fragment = nil
+        
+        // Remove common tracking parameters
+        let trackingParams = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid", "gclid"]
+        if let queryItems = components?.queryItems {
+            components?.queryItems = queryItems.filter { item in
+                !trackingParams.contains(item.name)
+            }
+        }
+        
+        // Normalize domain (remove www)
+        if let host = components?.host {
+            components?.host = host.replacingOccurrences(of: "www.", with: "")
+        }
+        
+        return components?.url?.absoluteString ?? url
+    }
+    
+    private func selectBestArticle(from articles: [Article]) -> Article {
+        // Priority scoring: reliability * recency * content quality
+        return articles.max { a, b in
+            let scoreA = calculateArticleScore(a)
+            let scoreB = calculateArticleScore(b)
+            return scoreA < scoreB
+        } ?? articles.first!
+    }
+    
+    private func calculateArticleScore(_ article: Article) -> Double {
+        let reliabilityScore = article.source.reliability
+        let recencyScore = max(0.1, 1.0 - (Date().timeIntervalSince(article.publishedAt) / (24 * 3600))) // Decay over 24 hours
+        let contentQualityScore = Double(article.content.count) / 1000.0 // Prefer longer content
+        let priorityScore = article.priority == .breaking ? 2.0 : (article.priority == .high ? 1.5 : 1.0)
+        
+        return reliabilityScore * recencyScore * min(contentQualityScore, 2.0) * priorityScore
+    }
+    
+    private func fuzzyDeduplication(from articles: [Article]) -> [Article] {
+        var result: [Article] = []
+        
+        for article in articles {
+            let isDuplicate = result.contains { existingArticle in
+                return calculateTitleSimilarity(article.title, existingArticle.title) > 0.85
+            }
+            
+            if !isDuplicate {
+                result.append(article)
+            }
+        }
+        
+        return result
+    }
+    
+    private func calculateTitleSimilarity(_ title1: String, _ title2: String) -> Double {
+        let words1 = Set(normalizeTitle(title1).components(separatedBy: " ").filter { !$0.isEmpty })
+        let words2 = Set(normalizeTitle(title2).components(separatedBy: " ").filter { !$0.isEmpty })
+        
+        let intersection = words1.intersection(words2).count
+        let union = words1.union(words2).count
+        
+        return union > 0 ? Double(intersection) / Double(union) : 0.0
     }
     
     // MARK: - Helper Methods
