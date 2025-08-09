@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import CoreData
 
 struct NewsWidgetEntryView: View {
     let entry: NewsWidgetEntry
@@ -14,7 +15,7 @@ struct NewsWidgetEntryView: View {
             Spacer()
             
             HStack {
-                Text(entry.article.source.name)
+                Text(entry.article.sourceName)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
@@ -37,21 +38,20 @@ struct NewsWidgetEntryView: View {
 
 struct NewsWidgetEntry: TimelineEntry {
     let date: Date
-    let article: Article
+    let article: WidgetArticle
 }
 
 struct NewsWidgetProvider: TimelineProvider {
-    private var placeholderArticle: Article {
-        Article(
+    private let dataService = WidgetDataService.shared
+    
+    private var placeholderArticle: WidgetArticle {
+        WidgetArticle(
+            id: UUID(),
             title: "Loading latest AI & tech news...",
             summary: "Your personalized news digest will appear here once articles are loaded.",
-            content: "Please open the Moning app to load the latest articles.",
-            source: NewsSource(name: "Moning", domain: "moning.app"),
-            category: .artificialIntelligence,
-            publishedAt: Date(),
-            audioURL: nil,
-            audioDuration: 0,
-            imageURL: nil
+            sourceName: "Moning",
+            category: "AI",
+            publishedAt: Date()
         )
     }
     
@@ -63,26 +63,44 @@ struct NewsWidgetProvider: TimelineProvider {
     }
     
     func getSnapshot(in context: Context, completion: @escaping (NewsWidgetEntry) -> Void) {
-        // TODO: Fetch real articles from Core Data via App Group
-        let entry = NewsWidgetEntry(
-            date: Date(),
-            article: placeholderArticle
-        )
-        completion(entry)
+        // Fetch real articles from Core Data via App Group
+        Task {
+            let articles = await dataService.fetchLatestArticles(limit: 1)
+            let article = articles.first ?? placeholderArticle
+            
+            await MainActor.run {
+                let entry = NewsWidgetEntry(
+                    date: Date(),
+                    article: article
+                )
+                completion(entry)
+            }
+        }
     }
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<NewsWidgetEntry>) -> Void) {
-        let currentDate = Date()
-        // TODO: Fetch real articles from Core Data via App Group
-        let entry = NewsWidgetEntry(
-            date: currentDate,
-            article: placeholderArticle
-        )
-        
-        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: currentDate)!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        
-        completion(timeline)
+        // Fetch real articles from Core Data via App Group
+        Task {
+            let articles = await dataService.fetchLatestArticles(limit: 5)
+            let currentDate = Date()
+            
+            var entries: [NewsWidgetEntry] = []
+            
+            // Create entries for the next few hours, cycling through articles
+            for hourOffset in 0..<5 {
+                let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate) ?? currentDate
+                let articleIndex = hourOffset % max(articles.count, 1)
+                let article = articles.isEmpty ? placeholderArticle : articles[articleIndex]
+                
+                entries.append(NewsWidgetEntry(date: entryDate, article: article))
+            }
+            
+            await MainActor.run {
+                let nextUpdate = Calendar.current.date(byAdding: .hour, value: 2, to: currentDate)!
+                let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
+                completion(timeline)
+            }
+        }
     }
 }
 
@@ -102,16 +120,13 @@ struct NewsWidget: Widget {
 #Preview(as: .systemMedium) {
     NewsWidget()
 } timeline: {
-    let placeholderArticle = Article(
+    let placeholderArticle = WidgetArticle(
+        id: UUID(),
         title: "AI Breakthrough in Neural Networks",
         summary: "Researchers achieve new milestone in artificial intelligence development.",
-        content: "Latest developments in AI technology continue to push boundaries.",
-        source: NewsSource(name: "TechNews", domain: "technews.com"),
-        category: .artificialIntelligence,
-        publishedAt: Date(),
-        audioURL: nil,
-        audioDuration: 0,
-        imageURL: nil
+        sourceName: "TechNews",
+        category: "AI",
+        publishedAt: Date()
     )
     NewsWidgetEntry(date: Date(), article: placeholderArticle)
 }

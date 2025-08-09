@@ -20,6 +20,15 @@ class SimplePersistenceController: ObservableObject {
         
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+        } else {
+            // Use App Group container for shared data access between app and widget
+            if let appGroupContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.jonathan.moning") {
+                let storeURL = appGroupContainer.appendingPathComponent("DataModel.sqlite")
+                container.persistentStoreDescriptions.first?.url = storeURL
+                print("✅ Using App Group container: \(storeURL)")
+            } else {
+                print("⚠️ App Group container not found, falling back to default location")
+            }
         }
         
         container.persistentStoreDescriptions.first?.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)

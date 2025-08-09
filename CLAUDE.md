@@ -68,15 +68,18 @@ open moning.xcodeproj
 - [ ] Add content quality scoring
 - [ ] Set up scheduled data collection jobs
 
-#### 2.3 AI Summarization
-- [ ] Deploy OpenAI gpt-oss-20b model on AWS Lambda + EFS
-- [ ] Set up EFS storage for model files and Lambda function
-- [ ] Create summarization pipeline with batch and real-time processing
+#### 2.3 AI Summarization & Voice Generation
+- [ ] Deploy OpenAI gpt-oss-20b model on AWS Lambda + EFS for text summarization
+- [ ] Deploy XTTS-v2 model on AWS Lambda + EFS for voice synthesis
+- [ ] Set up separate EFS storage for both models (gpt-oss-20b and XTTS-v2)
+- [ ] Create parallel processing pipeline: text summarization + voice generation
 - [ ] Implement multi-level summary generation (short, medium, detailed)
+- [ ] Configure voice cloning with custom news presenter voices
+- [ ] Set up streaming TTS with <150ms latency for real-time playback
 - [ ] Add sentiment analysis for articles
 - [ ] Create trending topics identification
 - [ ] Implement personalization based on user preferences
-- [ ] Configure CloudWatch events for Lambda container warming
+- [ ] Configure CloudWatch events for Lambda container warming (both models)
 
 ### Phase 3: Main iOS App Development (Weeks 5-6)
 
@@ -105,14 +108,17 @@ open moning.xcodeproj
 - [ ] Add related articles section
 
 #### 3.4 Audio Playback System
-- [ ] Integrate AVFoundation for audio playback
+- [ ] Integrate AVFoundation for audio playback with XTTS-v2 generated audio
 - [ ] Create AudioPlayer service with proper session management
+- [ ] Implement streaming audio support for real-time TTS (<150ms latency)
 - [ ] Implement media controls (play, pause, skip, speed control)
-- [ ] Add background audio support
+- [ ] Add background audio support for continuous news playback
 - [ ] Integrate with Control Center and lock screen controls
-- [ ] Support for AirPods and CarPlay
+- [ ] Support for AirPods and CarPlay integration
 - [ ] Add sleep timer functionality
-- [ ] Implement audio-only mode
+- [ ] Implement audio-only mode for hands-free news consumption
+- [ ] Add voice speed controls (0.5x - 2x playback speed)
+- [ ] Support for multiple voice personas (news anchor, conversational, etc.)
 
 ### Phase 4: Widget Development (Week 7)
 
@@ -283,9 +289,11 @@ open moning.xcodeproj
 ## Risk Mitigation
 
 ### Technical Risks
-- **Model Performance**: Implement fallback mechanisms and A/B testing
-- **Lambda Cold Starts**: Use CloudWatch warming and optimize model loading
-- **Cost Management**: Monitor Lambda execution time and optimize batch processing
+- **Model Performance**: Implement fallback mechanisms and A/B testing for both text and voice models
+- **Lambda Cold Starts**: Use CloudWatch warming and optimize model loading (especially for XTTS-v2)
+- **Voice Quality Consistency**: Monitor XTTS-v2 output quality and implement quality checks
+- **Cost Management**: Monitor Lambda execution time for both models and optimize batch processing
+- **Storage Costs**: Manage EFS storage for large model files (gpt-oss-20b + XTTS-v2)
 
 ### User Adoption
 - **Onboarding**: Clear value proposition and smooth user experience
