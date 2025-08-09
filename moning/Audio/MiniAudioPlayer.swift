@@ -115,12 +115,10 @@ struct MiniAudioPlayer: View {
     VStack {
         Spacer()
         
-        // Simulate playing article
+        // Mini audio player preview
         MiniAudioPlayer()
             .onAppear {
-                AudioManager.shared.currentArticle = MockData.articles[0]
-                AudioManager.shared.isPlaying = true
-                AudioManager.shared.playbackProgress = 0.3
+                // Note: Preview will show empty state until real articles are loaded
             }
     }
 }

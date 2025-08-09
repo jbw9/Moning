@@ -41,26 +41,42 @@ struct NewsWidgetEntry: TimelineEntry {
 }
 
 struct NewsWidgetProvider: TimelineProvider {
+    private var placeholderArticle: Article {
+        Article(
+            title: "Loading latest AI & tech news...",
+            summary: "Your personalized news digest will appear here once articles are loaded.",
+            content: "Please open the Moning app to load the latest articles.",
+            source: NewsSource(name: "Moning", domain: "moning.app"),
+            category: .artificialIntelligence,
+            publishedAt: Date(),
+            audioURL: nil,
+            audioDuration: 0,
+            imageURL: nil
+        )
+    }
+    
     func placeholder(in context: Context) -> NewsWidgetEntry {
         NewsWidgetEntry(
             date: Date(),
-            article: MockData.articles.first!
+            article: placeholderArticle
         )
     }
     
     func getSnapshot(in context: Context, completion: @escaping (NewsWidgetEntry) -> Void) {
+        // TODO: Fetch real articles from Core Data via App Group
         let entry = NewsWidgetEntry(
             date: Date(),
-            article: MockData.articles.first!
+            article: placeholderArticle
         )
         completion(entry)
     }
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<NewsWidgetEntry>) -> Void) {
         let currentDate = Date()
+        // TODO: Fetch real articles from Core Data via App Group
         let entry = NewsWidgetEntry(
             date: currentDate,
-            article: MockData.articles.first!
+            article: placeholderArticle
         )
         
         let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: currentDate)!
@@ -86,5 +102,16 @@ struct NewsWidget: Widget {
 #Preview(as: .systemMedium) {
     NewsWidget()
 } timeline: {
-    NewsWidgetEntry(date: Date(), article: MockData.articles.first!)
+    let placeholderArticle = Article(
+        title: "AI Breakthrough in Neural Networks",
+        summary: "Researchers achieve new milestone in artificial intelligence development.",
+        content: "Latest developments in AI technology continue to push boundaries.",
+        source: NewsSource(name: "TechNews", domain: "technews.com"),
+        category: .artificialIntelligence,
+        publishedAt: Date(),
+        audioURL: nil,
+        audioDuration: 0,
+        imageURL: nil
+    )
+    NewsWidgetEntry(date: Date(), article: placeholderArticle)
 }

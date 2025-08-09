@@ -2,6 +2,7 @@ import CoreData
 import Foundation
 import Combine
 
+@MainActor
 class SimpleDataService: ObservableObject {
     private let persistenceController: SimplePersistenceController
     private let newsService = NewsService.shared
@@ -14,8 +15,6 @@ class SimpleDataService: ObservableObject {
     @Published var lastNewsUpdate: Date?
     @Published var newsErrorMessage: String?
     
-    // Fallback to MockData if Core Data fails
-    private var useMockData = false
     
     init(persistenceController: SimplePersistenceController = .shared) {
         self.persistenceController = persistenceController
@@ -26,44 +25,32 @@ class SimpleDataService: ObservableObject {
     // MARK: - Articles
     
     func loadArticles() {
-        if useMockData {
-            self.articles = MockData.articles
-            return
-        }
-        
         let request: NSFetchRequest<ArticleEntity> = ArticleEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ArticleEntity.publishedAt, ascending: false)]
         
         do {
             let articleEntities = try persistenceController.container.viewContext.fetch(request)
             let convertedArticles = articleEntities.compactMap { convertToArticle($0) }
+            self.articles = convertedArticles
             
-            if convertedArticles.isEmpty && !MockData.articles.isEmpty {
-                // Fallback to MockData if no Core Data articles exist
-                print("📊 No Core Data articles found, using MockData")
-                self.articles = MockData.articles
-                useMockData = true
-            } else {
-                self.articles = convertedArticles
+            // If no articles exist, fetch from NewsAPI
+            if convertedArticles.isEmpty {
+                print("📊 No articles found in Core Data, will fetch from NewsAPI")
+                Task {
+                    await fetchLatestNews()
+                }
             }
         } catch {
             print("❌ Error loading articles from Core Data: \(error)")
-            print("📊 Falling back to MockData")
-            self.articles = MockData.articles
-            useMockData = true
+            // Start fresh and fetch from NewsAPI
+            self.articles = []
+            Task {
+                await fetchLatestNews()
+            }
         }
     }
     
     func saveArticle(_ article: Article) {
-        if useMockData {
-            // In mock mode, just update the local array
-            if let index = articles.firstIndex(where: { $0.id == article.id }) {
-                articles[index] = article
-            } else {
-                articles.append(article)
-            }
-            return
-        }
         
         let context = persistenceController.container.viewContext
         
@@ -86,10 +73,6 @@ class SimpleDataService: ObservableObject {
     }
     
     func deleteArticle(_ article: Article) {
-        if useMockData {
-            articles.removeAll { $0.id == article.id }
-            return
-        }
         
         let context = persistenceController.container.viewContext
         let request: NSFetchRequest<ArticleEntity> = ArticleEntity.fetchRequest()
@@ -130,36 +113,22 @@ class SimpleDataService: ObservableObject {
     // MARK: - News Sources
     
     func loadSources() {
-        if useMockData {
-            self.sources = MockData.sources
-            return
-        }
-        
         let request: NSFetchRequest<NewsSourceEntity> = NewsSourceEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \NewsSourceEntity.name, ascending: true)]
         
         do {
             let sourceEntities = try persistenceController.container.viewContext.fetch(request)
             let convertedSources = sourceEntities.compactMap { convertToNewsSource($0) }
-            
-            if convertedSources.isEmpty {
-                self.sources = MockData.sources
-            } else {
-                self.sources = convertedSources
-            }
+            self.sources = convertedSources
         } catch {
             print("Error loading sources: \(error)")
-            self.sources = MockData.sources
+            self.sources = []
         }
     }
     
     // MARK: - User Preferences
     
     func loadUserPreferences() {
-        if useMockData {
-            self.userPreferences = UserPreferences.default
-            return
-        }
         
         let request: NSFetchRequest<UserPreferencesEntity> = UserPreferencesEntity.fetchRequest()
         request.fetchLimit = 1
@@ -180,10 +149,6 @@ class SimpleDataService: ObservableObject {
     }
     
     func saveUserPreferences(_ preferences: UserPreferences) {
-        if useMockData {
-            self.userPreferences = preferences
-            return
-        }
         
         let context = persistenceController.container.viewContext
         
@@ -210,8 +175,8 @@ class SimpleDataService: ObservableObject {
         loadSources()
         loadUserPreferences()
         
-        // If we're using mock data or have no articles, fetch from news API
-        if useMockData || articles.isEmpty {
+        // If we have no articles, fetch from news API
+        if articles.isEmpty {
             Task {
                 await fetchLatestNews()
             }
@@ -296,9 +261,9 @@ class SimpleDataService: ObservableObject {
         // Sort by publication date
         self.articles = updatedArticles.sorted { $0.publishedAt > $1.publishedAt }
         
-        // Update mock data flag since we now have real data
+        // Articles successfully fetched and stored
         if !fetchedArticles.isEmpty {
-            useMockData = false
+            print("✅ Successfully fetched \(fetchedArticles.count) articles from NewsAPI")
         }
     }
     

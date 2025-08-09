@@ -60,12 +60,13 @@ class NewsService: ObservableObject {
     /// Fetch articles for a specific category
     func fetchArticlesForCategory(_ category: CategoryType) async throws -> [Article] {
         // Try both top headlines and search to get comprehensive results
-        let headlinesTask = fetchTopHeadlinesForCategory(category)
-        let searchTask = fetchSearchResultsForCategory(category)
+        async let headlines = fetchTopHeadlinesForCategory(category)
+        async let searchResults = fetchSearchResultsForCategory(category)
         
-        let (headlines, searchResults) = try await (headlinesTask, searchTask)
+        let headlinesArray = try await headlines
+        let searchResultsArray = try await searchResults
         
-        let combined = headlines + searchResults
+        let combined = headlinesArray + searchResultsArray
         return removeDuplicates(from: combined)
     }
     

@@ -29,7 +29,7 @@ class SimplePersistenceController: ObservableObject {
             if let error = error as NSError? {
                 print("Core Data error: \(error), \(error.userInfo)")
                 // For now, just log the error instead of crashing
-                print("❌ Core Data failed to load - falling back to MockData")
+                print("❌ Core Data failed to load - will fetch fresh data from NewsAPI")
             } else {
                 print("✅ Core Data loaded successfully")
             }
