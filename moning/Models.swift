@@ -236,7 +236,7 @@ struct Article: Identifiable, Hashable, Codable {
 
 // MARK: - User Preferences
 
-struct UserPreferences: Codable {
+struct UserPreferences: Codable, Equatable {
     var preferredCategories: [CategoryType]
     var readingSpeed: Int // Words per minute
     var audioPlaybackSpeed: Double // 0.5x to 2.0x

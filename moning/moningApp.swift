@@ -19,12 +19,9 @@ struct moningApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRootView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(dataService)
-                .task {
-                    await performInitialSetup()
-                }
         }
     }
     
