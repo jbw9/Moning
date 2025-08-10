@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Moning News Summarization API
+  Complete serverless infrastructure using OpenAI GPT-OSS on Bedrock
+
+Parameters:
+  GPTOSSModelId:
+    Type: String
+    Description: OpenAI GPT-OSS model ID from Bedrock
+    Default: openai.gpt-oss-20b-1:0
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 300
+    MemorySize: 1024
+    Environment:
+      Variables:
+        BEDROCK_MODEL_ID: !Ref GPTOSSModelId
+        DYNAMODB_TABLE: !Ref SummaryTable
+        BEDROCK_REGION: !Ref "AWS::Region"
+
+Resources:
+  # DynamoDB Table for Summary Caching
+  SummaryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: article-summaries
+      AttributeDefinitions:
+        - AttributeName: article_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: article_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Batch Summarizer Lambda (for RSS processing)
+  BatchSummarizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/batch-summarizer/
+      Handler: lambda_function.lambda_handler
+      Description: Process articles in batches using OpenAI GPT-OSS
+      Timeout: 900  # 15 minutes for large batches
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SummaryTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource: 
+              - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${GPTOSSModelId}'
+              - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/openai.gpt-oss-*'
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(6 hours)'  # Run every 6 hours
+            Input: '{"trigger": "scheduled", "batch_size": 50}'
+
+  # API Handler Lambda (for iOS app requests)
+  ApiHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/api-handler/
+      Handler: lambda_function.lambda_handler
+      Description: Handle iOS app requests for article summaries
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SummaryTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+            Resource: 
+              - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${GPTOSSModelId}'
+      Events:
+        SingleSummary:
+          Type: Api
+          Properties:
+            Path: /summaries/{article_id}
+            Method: GET
+            RestApiId: !Ref SummaryApi
+        BatchSummaries:
+          Type: Api
+          Properties:
+            Path: /batch-summaries
+            Method: POST
+            RestApiId: !Ref SummaryApi
+        OptionsRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: OPTIONS
+            RestApiId: !Ref SummaryApi
+
+  # API Gateway
+  SummaryApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET, POST, OPTIONS'"
+        AllowHeaders: "'Content-Type, Authorization'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
+
+  # CloudWatch Log Groups
+  BatchSummarizerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${BatchSummarizerFunction}"
+      RetentionInDays: 14
+
+  ApiHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ApiHandlerFunction}"
+      RetentionInDays: 14
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${SummaryApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+      
+  BatchSummarizerFunctionArn:
+    Description: "Batch Summarizer Lambda Function ARN"
+    Value: !GetAtt BatchSummarizerFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-BatchSummarizerArn"
+      
+  ApiHandlerFunctionArn:
+    Description: "API Handler Lambda Function ARN"
+    Value: !GetAtt ApiHandlerFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiHandlerArn"
+
+  DynamoDBTableName:
+    Description: "DynamoDB Table Name"
+    Value: !Ref SummaryTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TableName"

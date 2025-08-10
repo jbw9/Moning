@@ -1,0 +1,9 @@
+{
+  "deployment_time": "2025-08-10T22:18:05.323268",
+  "region": "us-west-2",
+  "dynamodb_table": "article-summaries",
+  "api_lambda_arn": "arn:aws:lambda:us-west-2:891376942131:function:moning-api-handler",
+  "batch_lambda_arn": "arn:aws:lambda:us-west-2:891376942131:function:moning-batch-summarizer",
+  "api_url": "https://y501z1431b.execute-api.us-west-2.amazonaws.com/prod",
+  "model_id": "openai.gpt-oss-20b-1:0"
+}
