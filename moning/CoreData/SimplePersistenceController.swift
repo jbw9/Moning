@@ -26,6 +26,11 @@ class SimplePersistenceController: ObservableObject {
                 let storeURL = appGroupContainer.appendingPathComponent("DataModel.sqlite")
                 container.persistentStoreDescriptions.first?.url = storeURL
                 print("✅ Using App Group container: \(storeURL)")
+                
+                // TEMPORARY: Reset Core Data store to handle schema changes
+                // Remove existing store files to force recreation with new AI summary fields
+                resetCoreDataStore(storeURL: storeURL)
+                
             } else {
                 print("⚠️ App Group container not found, falling back to default location")
             }
@@ -75,7 +80,10 @@ class SimplePersistenceController: ObservableObject {
             createAttribute("status", type: .stringAttributeType, optional: false, defaultValue: "unread"),
             createAttribute("isBookmarked", type: .booleanAttributeType, optional: false, defaultValue: false),
             createAttribute("readAt", type: .dateAttributeType, optional: true),
-            createAttribute("userRating", type: .integer16AttributeType, optional: true, defaultValue: 0)
+            createAttribute("userRating", type: .integer16AttributeType, optional: true, defaultValue: 0),
+            createAttribute("aiSummary", type: .stringAttributeType, optional: true),
+            createAttribute("summaryGeneratedAt", type: .dateAttributeType, optional: true),
+            createAttribute("summaryModel", type: .stringAttributeType, optional: true)
         ]
         
         articleEntity.properties = articleAttributes
@@ -179,6 +187,23 @@ class SimplePersistenceController: ObservableObject {
         model.entities = [articleEntity, sourceEntity, sessionEntity, prefsEntity]
         
         return model
+    }
+    
+    private func resetCoreDataStore(storeURL: URL) {
+        let fileManager = FileManager.default
+        
+        // Remove main store file
+        try? fileManager.removeItem(at: storeURL)
+        
+        // Remove additional Core Data files
+        let storeURLNoExt = storeURL.deletingPathExtension()
+        let shmURL = storeURLNoExt.appendingPathExtension("sqlite-shm")
+        let walURL = storeURLNoExt.appendingPathExtension("sqlite-wal")
+        
+        try? fileManager.removeItem(at: shmURL)
+        try? fileManager.removeItem(at: walURL)
+        
+        print("🗑️ Reset Core Data store for schema changes")
     }
     
     private static func createAttribute(_ name: String, type: NSAttributeType, optional: Bool, defaultValue: Any? = nil) -> NSAttributeDescription {
