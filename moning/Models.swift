@@ -182,6 +182,11 @@ struct Article: Identifiable, Hashable, Codable {
     var audioPlaybackPosition: TimeInterval
     var userRating: Int? // 1-5 stars
     
+    // AI Summary fields
+    var aiSummary: String?
+    var summaryGeneratedAt: Date?
+    var summaryModel: String?
+    
     init(id: UUID = UUID(), title: String, summary: String, content: String,
          source: NewsSource, category: CategoryType, publishedAt: Date,
          audioURL: String? = nil, audioDuration: TimeInterval = 0,
@@ -189,7 +194,8 @@ struct Article: Identifiable, Hashable, Codable {
          priority: ArticlePriority = .normal, readingTimeMinutes: Int = 3,
          sentiment: Double = 0.0, status: ArticleStatus = .unread,
          isBookmarked: Bool = false, readAt: Date? = nil,
-         audioPlaybackPosition: TimeInterval = 0, userRating: Int? = nil) {
+         audioPlaybackPosition: TimeInterval = 0, userRating: Int? = nil,
+         aiSummary: String? = nil, summaryGeneratedAt: Date? = nil, summaryModel: String? = nil) {
         self.id = id
         self.title = title
         self.summary = summary
@@ -210,6 +216,9 @@ struct Article: Identifiable, Hashable, Codable {
         self.readAt = readAt
         self.audioPlaybackPosition = audioPlaybackPosition
         self.userRating = userRating
+        self.aiSummary = aiSummary
+        self.summaryGeneratedAt = summaryGeneratedAt
+        self.summaryModel = summaryModel
     }
     
     var timeAgo: String {
@@ -231,6 +240,15 @@ struct Article: Identifiable, Hashable, Codable {
         let minutes = Int(audioDuration / 60)
         let seconds = Int(audioDuration.truncatingRemainder(dividingBy: 60))
         return "\(minutes):\(String(format: "%02d", seconds))"
+    }
+    
+    var hasSummary: Bool {
+        return aiSummary != nil && !aiSummary!.isEmpty
+    }
+    
+    var needsSummaryUpdate: Bool {
+        guard let generatedAt = summaryGeneratedAt else { return true }
+        return Date().timeIntervalSince(generatedAt) > 86400 // 24 hours
     }
 }
 

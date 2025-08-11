@@ -314,7 +314,10 @@ class SimpleDataService: ObservableObject {
             isBookmarked: entity.isBookmarked,
             readAt: entity.readAt,
             audioPlaybackPosition: entity.audioPlaybackPosition,
-            userRating: entity.userRating > 0 ? Int(entity.userRating) : nil
+            userRating: entity.userRating > 0 ? Int(entity.userRating) : nil,
+            aiSummary: entity.aiSummary,
+            summaryGeneratedAt: entity.summaryGeneratedAt,
+            summaryModel: entity.summaryModel
         )
     }
     
@@ -379,6 +382,9 @@ class SimpleDataService: ObservableObject {
         entity.readAt = article.readAt
         entity.audioPlaybackPosition = article.audioPlaybackPosition
         entity.userRating = article.userRating.map { Int16($0) } ?? 0
+        entity.aiSummary = article.aiSummary
+        entity.summaryGeneratedAt = article.summaryGeneratedAt
+        entity.summaryModel = article.summaryModel
         
         // Handle source relationship
         if entity.source?.id != article.source.id {
@@ -424,5 +430,66 @@ class SimpleDataService: ObservableObject {
         entity.offlineModeEnabled = preferences.offlineModeEnabled
         entity.dataSaverMode = preferences.dataSaverMode
         entity.preferredAudioVoice = preferences.preferredAudioVoice
+    }
+    
+    // MARK: - AI Summarization Integration
+    
+    @MainActor
+    func fetchLatestNewsWithSummaries() async {
+        // First fetch news articles
+        await fetchLatestNews()
+        
+        // Then fetch AI summaries for articles that don't have them or need updates
+        await updateAISummaries()
+    }
+    
+    @MainActor
+    func updateAISummaries() async {
+        let articlesNeedingSummaries = articles.filter { $0.needsSummaryUpdate }
+        
+        guard !articlesNeedingSummaries.isEmpty else {
+            print("📝 All articles already have up-to-date summaries")
+            return
+        }
+        
+        print("🤖 Updating AI summaries for \(articlesNeedingSummaries.count) articles")
+        
+        do {
+            let summaries = try await newsService.fetchSummariesForArticles(articlesNeedingSummaries)
+            
+            // Update articles with new summaries
+            for var article in articlesNeedingSummaries {
+                if let summary = summaries[article.id.uuidString] {
+                    article.aiSummary = summary
+                    article.summaryGeneratedAt = Date()
+                    article.summaryModel = "openai.gpt-oss-20b-1:0"
+                    
+                    // Save updated article to Core Data
+                    saveArticle(article)
+                }
+            }
+            
+            print("✅ Successfully updated \(summaries.count) AI summaries")
+            
+        } catch {
+            print("❌ Failed to update AI summaries: \(error.localizedDescription)")
+        }
+    }
+    
+    @MainActor
+    func updateSummaryForArticle(_ article: Article) async {
+        do {
+            if let summary = try await newsService.fetchSummaryForArticle(article.id.uuidString) {
+                var updatedArticle = article
+                updatedArticle.aiSummary = summary
+                updatedArticle.summaryGeneratedAt = Date()
+                updatedArticle.summaryModel = "openai.gpt-oss-20b-1:0"
+                
+                saveArticle(updatedArticle)
+                print("✅ Updated summary for article: \(article.title)")
+            }
+        } catch {
+            print("❌ Failed to update summary for article \(article.title): \(error.localizedDescription)")
+        }
     }
 }

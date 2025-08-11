@@ -376,3 +376,169 @@ class NewsService: ObservableObject {
         return Double(positiveCount - negativeCount) / Double(totalWords)
     }
 }
+
+// MARK: - AI Summarization Extension
+
+// Summarization API Models
+struct SummarizationRequest: Codable {
+    let article_ids: [String]
+}
+
+struct SummarizationResponse: Codable {
+    let summaries: [String: SummaryData?]
+    let found: Int
+    let not_found: Int
+    let total_requested: Int
+    let model_used: String
+}
+
+struct SummaryData: Codable {
+    let summary: String
+    let created_at: String?
+    let model_used: String?
+    let metadata: [String: String]?
+}
+
+struct SingleSummaryResponse: Codable {
+    let article_id: String
+    let summary: String
+    let created_at: String?
+    let model_used: String?
+    let cached: Bool
+    let metadata: [String: String]?
+}
+
+enum NewsServiceError: Error {
+    case invalidResponse
+    case apiError(Int)
+    case decodingError
+    case networkError
+    
+    var localizedDescription: String {
+        switch self {
+        case .invalidResponse:
+            return "Invalid response from server"
+        case .apiError(let code):
+            return "API error with status code: \(code)"
+        case .decodingError:
+            return "Failed to decode response"
+        case .networkError:
+            return "Network connection error"
+        }
+    }
+}
+
+extension NewsService {
+    
+    // Your deployed API endpoint
+    private var summarizationAPIURL: String {
+        return "https://y501z1431b.execute-api.us-west-2.amazonaws.com/prod"
+    }
+    
+    /// Fetch summaries for multiple articles
+    func fetchSummariesForArticles(_ articles: [Article]) async throws -> [String: String] {
+        let articleIds = articles.map { $0.id.uuidString }
+        
+        guard !articleIds.isEmpty else {
+            print("📝 No article IDs to fetch summaries for")
+            return [:]
+        }
+        
+        let request = SummarizationRequest(article_ids: articleIds)
+        let requestData = try JSONEncoder().encode(request)
+        
+        var urlRequest = URLRequest(url: URL(string: "\(summarizationAPIURL)/batch-summaries")!)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = requestData
+        
+        print("📤 Requesting summaries for \(articleIds.count) articles...")
+        
+        let (responseData, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NewsServiceError.invalidResponse
+        }
+        
+        print("📥 Summarization API response: \(httpResponse.statusCode)")
+        
+        guard httpResponse.statusCode == 200 else {
+            if let errorMessage = String(data: responseData, encoding: .utf8) {
+                print("❌ Summarization API error: \(errorMessage)")
+            }
+            throw NewsServiceError.apiError(httpResponse.statusCode)
+        }
+        
+        let summaryResponse = try JSONDecoder().decode(SummarizationResponse.self, from: responseData)
+        
+        print("✅ Summaries fetched: \(summaryResponse.found)/\(summaryResponse.total_requested)")
+        print("🤖 Model used: \(summaryResponse.model_used)")
+        
+        // Convert to simple [String: String] format
+        var summaries: [String: String] = [:]
+        for (articleId, summaryData) in summaryResponse.summaries {
+            if let data = summaryData {
+                summaries[articleId] = data.summary
+            }
+        }
+        
+        return summaries
+    }
+    
+    /// Fetch summary for a single article
+    func fetchSummaryForArticle(_ articleId: String) async throws -> String? {
+        let url = URL(string: "\(summarizationAPIURL)/summaries/\(articleId)")!
+        
+        print("📤 Requesting summary for article: \(articleId)")
+        
+        let (responseData, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NewsServiceError.invalidResponse
+        }
+        
+        print("📥 Single summary API response: \(httpResponse.statusCode)")
+        
+        if httpResponse.statusCode == 404 {
+            print("ℹ️ Summary not found for article: \(articleId)")
+            return nil
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw NewsServiceError.apiError(httpResponse.statusCode)
+        }
+        
+        let summaryResponse = try JSONDecoder().decode(SingleSummaryResponse.self, from: responseData)
+        
+        print("✅ Summary fetched for \(articleId)")
+        print("💾 Cached: \(summaryResponse.cached)")
+        
+        return summaryResponse.summary
+    }
+    
+    /// Enhanced news fetching with automatic summarization
+    func fetchLatestArticlesWithSummaries(categories: [CategoryType] = CategoryType.allCases) async {
+        // First fetch articles as usual
+        await fetchLatestArticles(categories: categories)
+        
+        // Then fetch summaries for the articles
+        guard !articles.isEmpty else {
+            print("📝 No articles to summarize")
+            return
+        }
+        
+        do {
+            print("🤖 Fetching AI summaries for \(articles.count) articles...")
+            let summaries = try await fetchSummariesForArticles(articles)
+            
+            // Update articles with summaries (this would require Core Data integration)
+            print("✅ Received \(summaries.count) summaries")
+            
+            // Note: In actual implementation, you would save these to Core Data here
+            // For now, just logging the success
+            
+        } catch {
+            print("❌ Failed to fetch summaries: \(error.localizedDescription)")
+        }
+    }
+}

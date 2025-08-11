@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22759" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="ArticleEntity" representedClassName="ArticleEntity" syncable="YES" codeGenerationType="class">
         <attribute name="audioURL" optional="YES" attributeType="String"/>
         <attribute name="audioDuration" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
@@ -20,6 +20,9 @@
         <attribute name="tags" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
         <attribute name="title" optional="NO" attributeType="String"/>
         <attribute name="userRating" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="aiSummary" optional="YES" attributeType="String"/>
+        <attribute name="summaryGeneratedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="summaryModel" optional="YES" attributeType="String"/>
         <relationship name="source" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="NewsSourceEntity" inverseName="articles" inverseEntity="NewsSourceEntity"/>
         <relationship name="readingSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReadingSessionEntity" inverseName="article" inverseEntity="ReadingSessionEntity"/>
     </entity>

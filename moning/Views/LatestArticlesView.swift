@@ -51,7 +51,7 @@ struct LatestArticlesView: View {
                         
                         Button("Try Again") {
                             Task {
-                                await dataService.refreshNews()
+                                await dataService.fetchLatestNewsWithSummaries()
                             }
                         }
                         .buttonStyle(.bordered)
@@ -79,7 +79,7 @@ struct LatestArticlesView: View {
                         
                         Button("Load News") {
                             Task {
-                                await dataService.fetchLatestNews()
+                                await dataService.fetchLatestNewsWithSummaries()
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -91,12 +91,12 @@ struct LatestArticlesView: View {
             .padding(.top)
         }
         .refreshable {
-            await dataService.refreshNews()
+            await dataService.fetchLatestNewsWithSummaries()
         }
         .task {
             // Auto-refresh if needed when view appears
             if dataService.shouldRefreshNews() {
-                await dataService.refreshNews()
+                await dataService.fetchLatestNewsWithSummaries()
             }
         }
     }
@@ -117,6 +117,40 @@ struct ArticleCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .lineLimit(4)
+            
+            // AI Summary Display
+            if article.hasSummary, let aiSummary = article.aiSummary {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Label("AI Summary", systemImage: "brain")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        
+                        Spacer()
+                        
+                        if let model = article.summaryModel {
+                            Text(model.uppercased().replacingOccurrences(of: "OPENAI.GPT-OSS-", with: "GPT-OSS "))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Text(aiSummary)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(3)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.05))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                        )
+                }
+            }
             
             HStack(spacing: 12) {
                 CategoryTag(category: article.category)
