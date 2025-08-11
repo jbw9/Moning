@@ -15,6 +15,11 @@ class SimpleDataService: ObservableObject {
     @Published var lastNewsUpdate: Date?
     @Published var newsErrorMessage: String?
     
+    // Weekly Recap properties
+    @Published private(set) var weeklyRecaps: [WeeklyRecap] = []
+    @Published private(set) var isGeneratingRecap = false
+    @Published private(set) var recapGenerationStatus: RecapGenerationStatus = .pending
+    
     
     init(persistenceController: SimplePersistenceController = .shared) {
         self.persistenceController = persistenceController
@@ -490,6 +495,183 @@ class SimpleDataService: ObservableObject {
             }
         } catch {
             print("❌ Failed to update summary for article \(article.title): \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Weekly Recap Management Extension
+
+extension SimpleDataService {
+    
+    // MARK: - Weekly Recap CRUD Operations
+    
+    func loadWeeklyRecaps() {
+        // For now, use in-memory storage since Core Data entities for WeeklyRecap aren't created yet
+        // In production, this would fetch from Core Data
+        print("📚 Loading weekly recaps from storage")
+        
+        // Sort by week start date, most recent first
+        weeklyRecaps = weeklyRecaps.sorted { $0.weekStartDate > $1.weekStartDate }
+    }
+    
+    func saveWeeklyRecap(_ recap: WeeklyRecap) {
+        // For now, save to in-memory array
+        // In production, this would save to Core Data
+        
+        // Check if recap already exists
+        if let existingIndex = weeklyRecaps.firstIndex(where: { $0.id == recap.id }) {
+            weeklyRecaps[existingIndex] = recap
+        } else {
+            weeklyRecaps.append(recap)
+        }
+        
+        // Keep sorted by date
+        weeklyRecaps = weeklyRecaps.sorted { $0.weekStartDate > $1.weekStartDate }
+        
+        print("✅ Saved weekly recap: \(recap.title)")
+    }
+    
+    func deleteWeeklyRecap(_ recap: WeeklyRecap) {
+        weeklyRecaps.removeAll { $0.id == recap.id }
+        print("🗑️ Deleted weekly recap: \(recap.title)")
+    }
+    
+    func getWeeklyRecap(for weekStartDate: Date) -> WeeklyRecap? {
+        let calendar = Calendar.current
+        return weeklyRecaps.first { recap in
+            calendar.isDate(recap.weekStartDate, equalTo: weekStartDate, toGranularity: .weekOfYear)
+        }
+    }
+    
+    func getCurrentWeekRecap() -> WeeklyRecap? {
+        let now = Date()
+        return getWeeklyRecap(for: now)
+    }
+    
+    func getRecapsForTimeRange(_ startDate: Date, _ endDate: Date) -> [WeeklyRecap] {
+        return weeklyRecaps.filter { recap in
+            recap.weekStartDate >= startDate && recap.weekEndDate <= endDate
+        }
+    }
+    
+    // MARK: - Weekly Recap Generation
+    
+    @MainActor
+    func generateWeeklyRecap(for weekStartDate: Date? = nil) async {
+        guard !isGeneratingRecap else {
+            print("⚠️ Weekly recap generation already in progress")
+            return
+        }
+        
+        isGeneratingRecap = true
+        recapGenerationStatus = .analyzing
+        
+        do {
+            print("🚀 Starting weekly recap generation...")
+            
+            let recap = try await newsService.generateWeeklyRecap(for: weekStartDate)
+            
+            recapGenerationStatus = .generating
+            
+            // Save the generated recap
+            saveWeeklyRecap(recap)
+            
+            recapGenerationStatus = .completed
+            print("✅ Weekly recap generated successfully: \(recap.title)")
+            
+        } catch {
+            recapGenerationStatus = .failed
+            print("❌ Failed to generate weekly recap: \(error.localizedDescription)")
+        }
+        
+        isGeneratingRecap = false
+    }
+    
+    @MainActor
+    func regenerateWeeklyRecap(_ existingRecap: WeeklyRecap) async {
+        await generateWeeklyRecap(for: existingRecap.weekStartDate)
+    }
+    
+    // MARK: - Weekly Recap Analytics
+    
+    func getRecapStats() -> (totalRecaps: Int, averageReadingTime: Int, topCategories: [CategoryType]) {
+        let totalRecaps = weeklyRecaps.count
+        let averageReadingTime = weeklyRecaps.isEmpty ? 0 : 
+            weeklyRecaps.map { $0.readingTimeMinutes }.reduce(0, +) / totalRecaps
+        
+        // Find most common categories across all recap themes
+        let allThemes = weeklyRecaps.flatMap { $0.themes }
+        let categoryFrequency = Dictionary(grouping: allThemes, by: { $0.category })
+            .mapValues { $0.count }
+        
+        let topCategories = categoryFrequency
+            .sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { $0.key }
+        
+        return (totalRecaps, averageReadingTime, Array(topCategories))
+    }
+    
+    func shouldGenerateWeeklyRecap() -> Bool {
+        // Check if we have a recap for the current week
+        if getCurrentWeekRecap() != nil {
+            return false
+        }
+        
+        // Only generate on weekends (Friday-Sunday) for the past week
+        let calendar = Calendar.current
+        let dayOfWeek = calendar.component(.weekday, from: Date())
+        return dayOfWeek >= 6 // Friday = 6, Saturday = 7, Sunday = 1
+    }
+    
+    // MARK: - Integration with Article Analysis
+    
+    func getArticlesForRecap(_ recap: WeeklyRecap) -> [Article] {
+        return articles.filter { article in
+            recap.articlesAnalyzed.contains(article.id)
+        }
+    }
+    
+    func markRecapAsRead(_ recap: WeeklyRecap) {
+        // Could add readAt timestamp or similar tracking in the future
+        // For now, just save the recap as-is
+        saveWeeklyRecap(recap)
+    }
+    
+    // MARK: - Weekly Recap Search and Filtering
+    
+    func searchRecaps(query: String) -> [WeeklyRecap] {
+        guard !query.isEmpty else { return weeklyRecaps }
+        
+        let lowercaseQuery = query.lowercased()
+        return weeklyRecaps.filter { recap in
+            recap.title.lowercased().contains(lowercaseQuery) ||
+            recap.summary.lowercased().contains(lowercaseQuery) ||
+            recap.bottomLine.lowercased().contains(lowercaseQuery) ||
+            recap.themes.contains { theme in
+                theme.name.lowercased().contains(lowercaseQuery) ||
+                theme.content.lowercased().contains(lowercaseQuery)
+            }
+        }
+    }
+    
+    func getRecapsByCategory(_ category: CategoryType) -> [WeeklyRecap] {
+        return weeklyRecaps.filter { recap in
+            recap.themes.contains { theme in
+                theme.category == category
+            }
+        }
+    }
+    
+    // MARK: - Weekly Recap Notifications/Scheduling
+    
+    func scheduleWeeklyRecapGeneration() {
+        // This would integrate with iOS background tasks or notifications
+        // For now, just check if we should generate
+        if shouldGenerateWeeklyRecap() {
+            Task {
+                await generateWeeklyRecap()
+            }
         }
     }
 }

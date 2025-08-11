@@ -389,3 +389,190 @@ enum SortOrder: String, CaseIterable {
         }
     }
 }
+
+// MARK: - Weekly Recap Models
+
+struct WeeklyRecap: Identifiable, Codable, Hashable {
+    let id: UUID
+    let title: String
+    let subtitle: String
+    let weekStartDate: Date
+    let weekEndDate: Date
+    let generatedAt: Date
+    let summary: String
+    let biggestStory: RecapStory?
+    let themes: [RecapTheme]
+    let statistics: WeeklyStats
+    let lookingAhead: [String]
+    let bottomLine: String
+    let modelUsed: String
+    let articlesAnalyzed: [UUID] // Article IDs that went into this recap
+    
+    init(id: UUID = UUID(), title: String, subtitle: String, weekStartDate: Date, weekEndDate: Date,
+         generatedAt: Date = Date(), summary: String, biggestStory: RecapStory? = nil,
+         themes: [RecapTheme] = [], statistics: WeeklyStats, lookingAhead: [String] = [],
+         bottomLine: String, modelUsed: String = "openai.gpt-oss-20b-1:0", articlesAnalyzed: [UUID] = []) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.weekStartDate = weekStartDate
+        self.weekEndDate = weekEndDate
+        self.generatedAt = generatedAt
+        self.summary = summary
+        self.biggestStory = biggestStory
+        self.themes = themes
+        self.statistics = statistics
+        self.lookingAhead = lookingAhead
+        self.bottomLine = bottomLine
+        self.modelUsed = modelUsed
+        self.articlesAnalyzed = articlesAnalyzed
+    }
+    
+    var weekDateRange: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return "\(formatter.string(from: weekStartDate)) - \(formatter.string(from: weekEndDate))"
+    }
+    
+    var isCurrentWeek: Bool {
+        let calendar = Calendar.current
+        let now = Date()
+        return calendar.isDate(weekStartDate, equalTo: now, toGranularity: .weekOfYear)
+    }
+    
+    var readingTimeMinutes: Int {
+        let wordCount = summary.components(separatedBy: .whitespacesAndNewlines).count +
+                       (biggestStory?.content.components(separatedBy: .whitespacesAndNewlines).count ?? 0) +
+                       themes.reduce(0) { $0 + $1.content.components(separatedBy: .whitespacesAndNewlines).count }
+        return max(5, wordCount / 200) // Assume 200 WPM reading speed
+    }
+}
+
+struct RecapStory: Identifiable, Codable, Hashable {
+    let id: UUID
+    let title: String
+    let content: String
+    let sourceArticleId: UUID?
+    let sourceName: String
+    let importance: Double
+    let url: String?
+    
+    init(id: UUID = UUID(), title: String, content: String, sourceArticleId: UUID? = nil,
+         sourceName: String, importance: Double, url: String? = nil) {
+        self.id = id
+        self.title = title
+        self.content = content
+        self.sourceArticleId = sourceArticleId
+        self.sourceName = sourceName
+        self.importance = importance
+        self.url = url
+    }
+}
+
+struct RecapTheme: Identifiable, Codable, Hashable {
+    let id: UUID
+    let name: String
+    let content: String
+    let category: CategoryType
+    let stories: [RecapStory]
+    let importance: Double
+    
+    init(id: UUID = UUID(), name: String, content: String, category: CategoryType,
+         stories: [RecapStory] = [], importance: Double) {
+        self.id = id
+        self.name = name
+        self.content = content
+        self.category = category
+        self.stories = stories
+        self.importance = importance
+    }
+    
+    var iconName: String {
+        return category.iconName
+    }
+    
+    var color: Color {
+        return category.color
+    }
+}
+
+struct WeeklyStats: Codable, Hashable {
+    let totalArticles: Int
+    let sourcesAnalyzed: Int
+    let categoryCounts: [CategoryType: Int]
+    let aiStories: Int
+    let securityStories: Int
+    let startupFunding: Int
+    let bigTechMoves: Int
+    let breakingNews: Int
+    
+    init(totalArticles: Int, sourcesAnalyzed: Int, categoryCounts: [CategoryType: Int] = [:],
+         aiStories: Int = 0, securityStories: Int = 0, startupFunding: Int = 0, 
+         bigTechMoves: Int = 0, breakingNews: Int = 0) {
+        self.totalArticles = totalArticles
+        self.sourcesAnalyzed = sourcesAnalyzed
+        self.categoryCounts = categoryCounts
+        self.aiStories = aiStories
+        self.securityStories = securityStories
+        self.startupFunding = startupFunding
+        self.bigTechMoves = bigTechMoves
+        self.breakingNews = breakingNews
+    }
+    
+    var topCategory: CategoryType? {
+        return categoryCounts.max(by: { $0.value < $1.value })?.key
+    }
+    
+    var diversityScore: Double {
+        guard totalArticles > 0 else { return 0.0 }
+        let nonZeroCategories = categoryCounts.values.filter { $0 > 0 }.count
+        return Double(nonZeroCategories) / Double(CategoryType.allCases.count)
+    }
+}
+
+// MARK: - Recap Generation Models
+
+struct RecapAnalysis: Codable {
+    let articles: [Article]
+    let trends: [CategoryType: [Article]]
+    let majorStories: [Article]
+    let statistics: WeeklyStats
+    let timeRange: DateInterval
+    
+    init(articles: [Article], trends: [CategoryType: [Article]] = [:], 
+         majorStories: [Article] = [], statistics: WeeklyStats, timeRange: DateInterval) {
+        self.articles = articles
+        self.trends = trends
+        self.majorStories = majorStories
+        self.statistics = statistics
+        self.timeRange = timeRange
+    }
+}
+
+enum RecapGenerationStatus: String, CaseIterable, Codable {
+    case pending = "pending"
+    case analyzing = "analyzing"
+    case generating = "generating"
+    case completed = "completed"
+    case failed = "failed"
+    
+    var displayName: String {
+        switch self {
+        case .pending: return "Pending"
+        case .analyzing: return "Analyzing Articles"
+        case .generating: return "Generating Recap"
+        case .completed: return "Completed"
+        case .failed: return "Failed"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .pending: return .gray
+        case .analyzing: return .blue
+        case .generating: return .orange
+        case .completed: return .green
+        case .failed: return .red
+        }
+    }
+}

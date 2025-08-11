@@ -542,3 +542,580 @@ extension NewsService {
         }
     }
 }
+
+// MARK: - Weekly Recap Generation Extension
+
+extension NewsService {
+    
+    /// Generate a comprehensive weekly recap of tech industry developments
+    func generateWeeklyRecap(for weekStartDate: Date? = nil) async throws -> WeeklyRecap {
+        print("🚀 GENERATING ENHANCED TECH INDUSTRY WEEKLY RECAP")
+        print(String(repeating: "=", count: 80))
+        
+        // Determine the week to analyze
+        let startDate = weekStartDate ?? Date().addingTimeInterval(-7 * 24 * 60 * 60)
+        let endDate = startDate.addingTimeInterval(7 * 24 * 60 * 60)
+        
+        print("📅 Analyzing week: \(formatDate(startDate)) to \(formatDate(endDate))")
+        
+        // Step 1: Fetch and analyze articles from the past week
+        let analysis = try await fetchAndAnalyzeWeeklyArticles(startDate: startDate, endDate: endDate)
+        
+        if analysis.statistics.totalArticles < 5 {
+            throw NewsServiceError.insufficientData("Found only \(analysis.statistics.totalArticles) articles - need at least 5 for meaningful recap")
+        }
+        
+        print("📈 Analysis complete: \(analysis.statistics.totalArticles) articles from \(analysis.statistics.sourcesAnalyzed) sources")
+        
+        // Step 2: Try AWS Bedrock generation first
+        if let aiRecap = try await generateAIWeeklyRecap(from: analysis) {
+            print("✅ Successfully generated AI-powered weekly recap")
+            return aiRecap
+        }
+        
+        // Step 3: Fallback to structured recap if AI fails
+        print("📝 Generating structured fallback recap")
+        return createStructuredWeeklyRecap(from: analysis)
+    }
+    
+    /// Fetch and analyze articles from the specified week
+    private func fetchAndAnalyzeWeeklyArticles(startDate: Date, endDate: Date) async throws -> RecapAnalysis {
+        
+        // Fetch articles for all categories to get comprehensive coverage
+        let categories = CategoryType.allCases
+        var allArticles: [Article] = []
+        
+        // Fetch from both NewsAPI and RSS feeds
+        print("📡 Fetching articles from multiple sources...")
+        
+        // Get NewsAPI articles
+        let newsAPIArticles = try await fetchNewsAPIArticles(categories: categories)
+        
+        // Get RSS articles
+        let rssArticles = await rssService.fetchAllRSSArticles()
+        
+        // Combine and filter for the week
+        allArticles = (newsAPIArticles + rssArticles).filter { article in
+            article.publishedAt >= startDate && article.publishedAt <= endDate
+        }
+        
+        // Enhanced deduplication
+        let uniqueArticles = enhancedDeduplication(from: allArticles)
+            .sorted { $0.publishedAt > $1.publishedAt }
+        
+        print("✅ Found \(uniqueArticles.count) unique articles for the week")
+        
+        // Analyze trends and identify major stories
+        return analyzeArticleTrends(articles: uniqueArticles, timeRange: DateInterval(start: startDate, end: endDate))
+    }
+    
+    /// Analyze article trends similar to the Python enhanced_tech_recap logic
+    private func analyzeArticleTrends(articles: [Article], timeRange: DateInterval) -> RecapAnalysis {
+        
+        // Key terms for enhanced categorization (matching Python logic)
+        let aiTerms = ["openai", "anthropic", "google ai", "microsoft ai", "nvidia", "meta ai", "gpt", "claude", "gemini", "llm", "artificial intelligence", "machine learning", "ai model"]
+        let securityTerms = ["hack", "security", "breach", "vulnerability", "cyber", "ransomware", "phishing"]
+        let startupTerms = ["funding", "raises", "series", "investment", "venture", "ipo", "acquisition"]
+        let bigTechTerms = ["apple", "google", "microsoft", "amazon", "meta", "tesla", "nvidia", "openai"]
+        let breakthroughTerms = ["launches", "announces", "reveals", "breakthrough", "first", "revolutionary"]
+        
+        var trends: [CategoryType: [Article]] = [:]
+        var majorStories: [Article] = []
+        var categoryStats: [CategoryType: Int] = [:]
+        
+        var aiStoryCount = 0
+        var securityStoryCount = 0
+        var startupFundingCount = 0
+        var bigTechMovesCount = 0
+        var breakingNewsCount = 0
+        
+        // Analyze each article for trends and importance
+        for var article in articles {
+            let text = (article.title + " " + article.summary + " " + article.content).lowercased()
+            
+            var importance = 0.0
+            var categories: [CategoryType] = []
+            
+            // AI/ML detection (matching Python logic)
+            if aiTerms.contains(where: { text.contains($0) }) {
+                trends[.artificialIntelligence, default: []].append(article)
+                categories.append(.artificialIntelligence)
+                importance += 2.0
+                aiStoryCount += 1
+            }
+            
+            // Security detection
+            if securityTerms.contains(where: { text.contains($0) }) {
+                trends[.cybersecurity, default: []].append(article)
+                categories.append(.cybersecurity)
+                importance += 1.5
+                securityStoryCount += 1
+            }
+            
+            // Startup/funding detection
+            if startupTerms.contains(where: { text.contains($0) }) {
+                trends[.startups, default: []].append(article)
+                categories.append(.startups)
+                importance += 1.0
+                startupFundingCount += 1
+            }
+            
+            // Big tech detection
+            if bigTechTerms.contains(where: { text.contains($0) }) {
+                trends[.technology, default: []].append(article)
+                categories.append(.technology)
+                importance += 1.5
+                bigTechMovesCount += 1
+            }
+            
+            // Breakthrough/major announcements
+            if breakthroughTerms.contains(where: { text.contains($0) }) {
+                importance += 1.0
+            }
+            
+            // Breaking news priority boost
+            if article.priority == .breaking {
+                importance += 2.0
+                breakingNewsCount += 1
+            } else if article.priority == .high {
+                importance += 1.0
+            }
+            
+            // Source reliability boost
+            importance += article.source.reliability
+            
+            // Recency boost (matching Python logic)
+            let hoursOld = Date().timeIntervalSince(article.publishedAt) / 3600
+            if hoursOld < 24 {
+                importance += 0.3
+            } else if hoursOld < 72 {
+                importance += 0.1
+            }
+            
+            // Store the calculated importance (we'll need to recreate the article)
+            if importance >= 2.0 {
+                majorStories.append(article)
+            }
+            
+            // Update category stats
+            for category in categories {
+                categoryStats[category, default: 0] += 1
+            }
+            categoryStats[article.category, default: 0] += 1
+        }
+        
+        // Sort major stories by importance and recency
+        majorStories = majorStories
+            .sorted { a, b in
+                let scoreA = calculateArticleScore(a)
+                let scoreB = calculateArticleScore(b)
+                return scoreA > scoreB
+            }
+            .prefix(10)
+            .map { $0 }
+        
+        let statistics = WeeklyStats(
+            totalArticles: articles.count,
+            sourcesAnalyzed: Set(articles.map { $0.source.name }).count,
+            categoryCounts: categoryStats,
+            aiStories: aiStoryCount,
+            securityStories: securityStoryCount,
+            startupFunding: startupFundingCount,
+            bigTechMoves: bigTechMovesCount,
+            breakingNews: breakingNewsCount
+        )
+        
+        return RecapAnalysis(
+            articles: articles,
+            trends: trends,
+            majorStories: majorStories,
+            statistics: statistics,
+            timeRange: timeRange
+        )
+    }
+    
+    
+    /// Create sophisticated prompt for weekly recap (matching Python enhanced_tech_recap.py)
+    private func createWeeklyRecapPrompt(from analysis: RecapAnalysis) -> String {
+        let majorStories = analysis.majorStories.prefix(5)
+        let articleContext = majorStories.map { article in
+            "• \(article.title) (\(article.source.name)) - \(article.summary.prefix(200))..."
+        }.joined(separator: "\n")
+        
+        let stats = analysis.statistics
+        
+        return """
+        You are an expert tech industry analyst writing a Morning Brew-style weekly recap.
+        
+        This week's top tech stories:
+        \(articleContext)
+        
+        Industry stats: \(stats.aiStories) AI stories, \(stats.securityStories) security stories, \(stats.bigTechMoves) big tech moves, \(stats.startupFunding) funding stories.
+        
+        Write an engaging 1200-word industry recap covering:
+        1. Week's biggest story with detailed analysis
+        2. 4-5 key industry themes with insights  
+        3. What to watch next week
+        4. Bottom line takeaway for business leaders
+        
+        Use a conversational, insightful tone like Morning Brew. Include specific company names and numbers where relevant.
+        Structure with clear sections and engaging subheadings.
+        Focus on "why this matters" analysis rather than just summarizing events.
+        """
+    }
+    
+    /// Parse AI response into structured WeeklyRecap (simplified parsing)
+    private func parseAIRecapResponse(_ content: String, from analysis: RecapAnalysis) -> WeeklyRecap {
+        // Simplified parsing - in production you might want more sophisticated parsing
+        let biggestStory = analysis.majorStories.first.map { article in
+            RecapStory(
+                title: article.title,
+                content: article.summary,
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        // Create themes from trends
+        let themes = analysis.trends.compactMap { (category, articles) -> RecapTheme? in
+            guard articles.count >= 2 else { return nil }
+            
+            let themeStories = articles.prefix(3).map { article in
+                RecapStory(
+                    title: article.title,
+                    content: article.summary,
+                    sourceArticleId: article.id,
+                    sourceName: article.source.name,
+                    importance: calculateArticleScore(article),
+                    url: article.sourceURL
+                )
+            }
+            
+            return RecapTheme(
+                name: getThemeName(for: category),
+                content: getThemeAnalysis(for: category, articles: articles),
+                category: category,
+                stories: Array(themeStories),
+                importance: Double(articles.count)
+            )
+        }
+        
+        let weekStart = analysis.timeRange.start
+        let weekEnd = analysis.timeRange.end
+        
+        return WeeklyRecap(
+            title: "Tech Weekly: Industry Pulse",
+            subtitle: "Week of \(formatDate(weekEnd))",
+            weekStartDate: weekStart,
+            weekEndDate: weekEnd,
+            summary: content,
+            biggestStory: biggestStory,
+            themes: themes,
+            statistics: analysis.statistics,
+            lookingAhead: generateLookingAhead(from: analysis),
+            bottomLine: extractBottomLine(from: content),
+            articlesAnalyzed: analysis.articles.map { $0.id }
+        )
+    }
+    
+    /// Create structured weekly recap as fallback
+    private func createStructuredWeeklyRecap(from analysis: RecapAnalysis) -> WeeklyRecap {
+        let weekStart = analysis.timeRange.start
+        let weekEnd = analysis.timeRange.end
+        let stats = analysis.statistics
+        
+        // Find biggest story
+        let biggestStory = analysis.majorStories.first.map { article in
+            RecapStory(
+                title: article.title,
+                content: "This week's most significant development from \(article.source.name). \(article.summary)\n\nThis story matters because it signals broader shifts in how the industry approaches innovation, competition, and market positioning.",
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        // Generate themes from trends (matching Python logic)
+        var themes: [RecapTheme] = []
+        
+        if stats.aiStories >= 3 {
+            themes.append(createAITheme(from: analysis.trends[.artificialIntelligence] ?? []))
+        }
+        
+        if stats.securityStories >= 2 {
+            themes.append(createSecurityTheme(from: analysis.trends[.cybersecurity] ?? []))
+        }
+        
+        if stats.bigTechMoves >= 3 {
+            themes.append(createBigTechTheme(from: analysis.trends[.technology] ?? []))
+        }
+        
+        if stats.startupFunding >= 2 {
+            themes.append(createFundingTheme(from: analysis.trends[.startups] ?? []))
+        }
+        
+        let summary = createWeeklySummary(
+            biggestStory: biggestStory,
+            themes: themes,
+            statistics: stats,
+            weekRange: formatDate(weekStart) + " - " + formatDate(weekEnd)
+        )
+        
+        return WeeklyRecap(
+            title: "Tech Weekly: Industry Pulse",
+            subtitle: "Week of \(formatDate(weekEnd))",
+            weekStartDate: weekStart,
+            weekEndDate: weekEnd,
+            summary: summary,
+            biggestStory: biggestStory,
+            themes: themes,
+            statistics: stats,
+            lookingAhead: generateLookingAhead(from: analysis),
+            bottomLine: "This week reinforced that we're witnessing a fundamental reshaping of the technology landscape. The convergence of AI capabilities, security challenges, and competitive pressures creates both unprecedented opportunities and risks for businesses and consumers alike.",
+            articlesAnalyzed: analysis.articles.map { $0.id }
+        )
+    }
+    
+    // MARK: - Helper Methods for Recap Generation
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+    
+    private func getThemeName(for category: CategoryType) -> String {
+        switch category {
+        case .artificialIntelligence: return "AI Innovation Surge"
+        case .cybersecurity: return "Cybersecurity Spotlight"
+        case .technology: return "Big Tech Strategic Moves"
+        case .startups: return "Startup Funding Landscape"
+        case .blockchain: return "Crypto & Web3 Developments"
+        case .mobile: return "Mobile Platform Evolution"
+        case .cloud: return "Cloud Infrastructure Trends"
+        case .iot: return "Connected Device Innovation"
+        }
+    }
+    
+    private func getThemeAnalysis(for category: CategoryType, articles: [Article]) -> String {
+        switch category {
+        case .artificialIntelligence:
+            return "The AI landscape continues its rapid evolution, with companies racing to deploy more capable and efficient systems. What's particularly notable is the shift from research breakthroughs to production deployments."
+        case .cybersecurity:
+            return "Security remains a top priority as digital infrastructure becomes more complex and attack vectors multiply. These incidents highlight the ongoing cat-and-mouse game between security teams and threat actors."
+        case .technology:
+            return "Major technology companies are making strategic pivots that reflect changing market conditions and competitive pressures. These moves often signal broader industry trends worth watching."
+        case .startups:
+            return "Despite economic uncertainties, investor appetite for innovative technology companies remains strong, particularly in areas like AI, cybersecurity, and enterprise software."
+        default:
+            return "Significant developments in this sector continue to shape the broader technology landscape and influence strategic decisions across multiple industries."
+        }
+    }
+    
+    private func createAITheme(from articles: [Article]) -> RecapTheme {
+        let stories = articles.prefix(3).map { article in
+            RecapStory(
+                title: article.title,
+                content: article.summary,
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        return RecapTheme(
+            name: "AI Innovation Surge",
+            content: "The AI revolution continues at breakneck speed with significant model releases and enterprise adoption. Companies are racing not just to build better models, but to make them more accessible and cost-effective.",
+            category: .artificialIntelligence,
+            stories: Array(stories),
+            importance: Double(articles.count)
+        )
+    }
+    
+    private func createSecurityTheme(from articles: [Article]) -> RecapTheme {
+        let stories = articles.prefix(2).map { article in
+            RecapStory(
+                title: article.title,
+                content: article.summary,
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        return RecapTheme(
+            name: "Cybersecurity Spotlight",
+            content: "This week highlighted persistent vulnerabilities in connected systems. Security remains a critical weak point, with researchers continuing to find alarming vulnerabilities across multiple platforms.",
+            category: .cybersecurity,
+            stories: Array(stories),
+            importance: Double(articles.count)
+        )
+    }
+    
+    private func createBigTechTheme(from articles: [Article]) -> RecapTheme {
+        let stories = articles.prefix(3).map { article in
+            RecapStory(
+                title: article.title,
+                content: article.summary,
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        return RecapTheme(
+            name: "Big Tech Strategic Moves",
+            content: "Major technology companies made significant strategic announcements this week. Tech giants are doubling down on AI infrastructure and hardware capabilities, signaling the next phase of competition.",
+            category: .technology,
+            stories: Array(stories),
+            importance: Double(articles.count)
+        )
+    }
+    
+    private func createFundingTheme(from articles: [Article]) -> RecapTheme {
+        let stories = articles.prefix(3).map { article in
+            RecapStory(
+                title: article.title,
+                content: article.summary,
+                sourceArticleId: article.id,
+                sourceName: article.source.name,
+                importance: calculateArticleScore(article),
+                url: article.sourceURL
+            )
+        }
+        
+        return RecapTheme(
+            name: "Startup Funding Landscape",
+            content: "Despite economic uncertainties, investor appetite for innovative technology companies remains strong, particularly in areas like AI, cybersecurity, and enterprise software.",
+            category: .startups,
+            stories: Array(stories),
+            importance: Double(articles.count)
+        )
+    }
+    
+    private func generateLookingAhead(from analysis: RecapAnalysis) -> [String] {
+        return [
+            "Earnings reports from major tech companies will reveal how AI investments are translating to revenue",
+            "Regulatory responses to this week's developments, particularly around AI and data privacy",
+            "Market reactions to the strategic moves announced this week",
+            "Continued evolution in AI model capabilities and deployment strategies"
+        ]
+    }
+    
+    private func extractBottomLine(from content: String) -> String {
+        // Simple extraction - look for "bottom line" section or use default
+        if let range = content.lowercased().range(of: "bottom line") {
+            let startIndex = range.upperBound
+            let remainingText = String(content[startIndex...])
+            let lines = remainingText.components(separatedBy: .newlines)
+            let relevantLines = lines.prefix(3).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            return relevantLines.isEmpty ? getDefaultBottomLine() : relevantLines
+        }
+        return getDefaultBottomLine()
+    }
+    
+    private func getDefaultBottomLine() -> String {
+        return "This week reinforced that we're witnessing a fundamental reshaping of the technology landscape. Companies that can effectively balance innovation with security and regulatory compliance are positioning themselves for long-term success."
+    }
+    
+    private func createWeeklySummary(biggestStory: RecapStory?, themes: [RecapTheme], statistics: WeeklyStats, weekRange: String) -> String {
+        var summary = "# 📰 Tech Weekly: Industry Pulse\n*\(weekRange)*\n\n---\n\n"
+        
+        if let story = biggestStory {
+            summary += "## 🔥 **THIS WEEK'S HEADLINE**\n\n**\(story.title)**\n\n\(story.content)\n\n---\n\n"
+        }
+        
+        summary += "## 📊 **KEY INDUSTRY THEMES**\n\n"
+        
+        for theme in themes {
+            summary += "### \(theme.name)\n\n"
+            for story in theme.stories {
+                summary += "- **\(story.title)** (\(story.sourceName))\n"
+            }
+            summary += "\n\(theme.content)\n\n"
+        }
+        
+        summary += """
+        ---
+        
+        ## 🔮 **LOOKING AHEAD**
+        
+        **Next Week's Watch List:**
+        - Earnings reports from major tech companies will reveal how AI investments are translating to revenue
+        - Regulatory responses to this week's developments, particularly around AI and data privacy
+        - Market reactions to the strategic moves announced this week
+        
+        ---
+        
+        📊 **This Week by the Numbers:**
+        - \(statistics.totalArticles) articles analyzed across \(statistics.sourcesAnalyzed) sources
+        - \(statistics.aiStories) AI & ML developments tracked
+        - \(statistics.securityStories) cybersecurity incidents reported
+        - \(statistics.startupFunding) funding announcements
+        - \(statistics.bigTechMoves) big tech strategic moves
+        
+        *Ready for next week's recap? The tech industry never sleeps.* 🚀
+        """
+        
+        return summary
+    }
+    
+    /// Generate AI-powered weekly recap using existing AWS integration
+    private func generateAIWeeklyRecap(from analysis: RecapAnalysis) async throws -> WeeklyRecap? {
+        do {
+            // Use existing AWS Bedrock integration pattern
+            let prompt = createWeeklyRecapPrompt(from: analysis)
+            
+            let payload: [String: Any] = [
+                "messages": [
+                    ["role": "user", "content": prompt]
+                ],
+                "max_completion_tokens": 3000,
+                "temperature": 0.7
+            ]
+            
+            guard let url = URL(string: "\(summarizationAPIURL)/generate-recap") else {
+                throw NewsServiceError.invalidResponse
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+            
+            print("🤖 Generating weekly recap with OpenAI GPT-OSS-20B...")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("❌ Weekly recap generation failed")
+                return nil
+            }
+            
+            if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let content = jsonResponse["recap"] as? String {
+                return parseAIRecapResponse(content, from: analysis)
+            }
+            
+        } catch {
+            print("❌ AWS recap generation failed: \(error)")
+        }
+        
+        return nil
+    }
+}
+
+// MARK: - Recap Service Errors
+
+extension NewsServiceError {
+    static func insufficientData(_ message: String) -> NewsServiceError {
+        return .networkError // Use existing error type for now
+    }
+}
